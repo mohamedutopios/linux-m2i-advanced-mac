@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$/demo/3-demo-ci-cd-api" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/demo/6-demo-sdk" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/demo/7-demo-cors" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/demo/8-demo-jwt" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/demo/demo-angular-food/angular-food" vcs="Git" />
+  </component>
+</project>

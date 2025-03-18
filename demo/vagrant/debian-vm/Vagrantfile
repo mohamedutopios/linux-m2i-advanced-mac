@@ -1,0 +1,22 @@
+Vagrant.configure("2") do |config|
+  # Box Debian officielle (Bookworm 12.x)
+  config.vm.box = "debian/bookworm64"
+
+  # Nom personnalisé pour la VM
+  config.vm.hostname = "debian-vm"
+
+  # Configuration du réseau privé (optionnel)
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # Mémoire et CPU
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "2048"
+    vb.cpus = 2
+  end
+
+  # Provisionnement initial avec un script shell simple (optionnel)
+  config.vm.provision "shell", inline: <<-SHELL
+    sudo apt-get update -y
+    sudo apt install procps net-tools iproute2 curl wget vim -y
+  SHELL
+end

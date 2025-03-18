@@ -1,0 +1,130 @@
+/* @theme utopios */
+
+@import '../gaia';
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color:#438ecc;
+}
+
+ul,
+li,
+p {
+    margin: 0;
+}
+
+header {
+    background: linear-gradient(90deg, #6165ab 0%, #438ecc 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+section {
+    background: white;
+}
+
+/* add full-background color to gradiant on title */
+section.lead {
+    background: linear-gradient(90deg, #6165ab 0%, #438ecc 100%);
+}
+
+/* add white color on title */
+section.lead h1,
+section.lead h2,
+section.lead h3,
+section.lead h4,
+section.lead h5,
+section.lead h6 {
+    color: white;
+}
+
+/* paginate */
+section::after {
+    color: white;
+}
+
+footer {
+    background: linear-gradient(90deg, #6165ab 0%, #438ecc 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* STRUCTURE */
+
+.columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    /* justify-content: center !important; */
+}
+
+.columns-center {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    justify-items: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.columns3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    /* justify-content: center !important; */
+}
+
+.columns3-center {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    justify-items: center;
+    justify-content: center;
+    align-items: center;
+}
+
+thead th {
+    color: white !important;
+    background-color: #438ecc !important;
+}
+
+/* pour modifier le highlight par défaut des blocs de code */
+/* Actuellement marp utilise highlight.js */
+/* ils pensent le changer plus tard https://github.com/marp-team/marp-core/issues/296 */
+
+code {
+    color: #d4d4d4 !important;
+}
+
+.hljs-title {
+    color: #dcdcaa !important;
+}
+
+.hljs-keyword {
+    color: #569cd6 !important;
+}
+
+.hljs-string {
+    color: #ce9178 !important;
+}
+
+.hljs-comment {
+    color: #6a9955 !important;
+}
+
+.summary {
+    font-size: x-large;
+}
+
+marp-pre {
+    margin-top: 0;
+    background-color:  #1e1e1e !important;
+}

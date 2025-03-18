@@ -1,0 +1,5 @@
+{
+    "markdown.marp.themes": [
+      "https://utopios-marp-assets.s3.eu-west-3.amazonaws.com/utopios.css"
+    ]
+  }
