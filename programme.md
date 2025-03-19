@@ -74,7 +74,6 @@ Gestion de l'activité
 – Configuration de journald
 – Rétro-compatibilité avec rsyslogd
 – Etude des principales options de systemctl
-m2iformation.fr 3/4
 Exemple de travaux pratiques (à titre indicatif)
 – Analyse d'un service en échec
 Jour 3
