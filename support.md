@@ -3875,6 +3875,986 @@ En pratique, la plupart des utilisateurs LVM n’ont pas à manipuler directemen
 
 </div>
 
+---
+
+<!-- _class: lead -->
+<!-- _paginate: false -->
+
+## Maintenance de la configuration réseau
+
+---
+
+### Maintenance de la configuration réseau
+
+#### Rappel des notions fondamentales 
+
+<div style="font-size:30px">
+
+####  Interfaces réseau sous Linux
+
+Chaque interface réseau (carte Ethernet, Wi-Fi, interfaces virtuelles, etc.) est représentée par un nom logique sous Linux :
+
+- **eth0, eth1…** : anciennes conventions pour les interfaces Ethernet.
+- **ens33, enp2s0, etc.** : nouvelle nomenclature standard (Predictable Network Interface Names).
+- **wlan0, wlan1, etc.** : pour les interfaces Wi-Fi.
+
+Afficher les interfaces actives :
+
+```bash
+ip addr
+```
+
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Configuration réseau sous Debian
+
+<div style="font-size:22px">
+
+
+####  Fichiers de configuration réseau
+
+Sous Debian, les principaux fichiers utilisés pour configurer les interfaces réseau sont :
+
+- Fichier historique :  
+```bash
+/etc/network/interfaces
+```
+
+Exemple classique de configuration statique dans `/etc/network/interfaces` :
+
+```bash
+auto eth0
+iface eth0 inet static
+    address 192.168.1.10
+    netmask 255.255.255.0
+    gateway 192.168.1.1
+    dns-nameservers 8.8.8.8 8.8.4.4
+```
+
+- Si vous utilisez **Netplan** (sur Debian récent), vous trouverez les configurations YAML dans :  
+```bash
+/etc/netplan/*.yaml
+```
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Maintenance régulière
+
+<div style="font-size:24px">
+
+<br>
+
+### Vérification de l’état des interfaces réseau :
+
+Pour vérifier l’état des interfaces :
+
+```bash
+ip addr show
+ip link show
+```
+
+**Exemple de diagnostic :**
+
+- `UP` indique que l'interface est activée.
+- `DOWN` indique qu’elle est désactivée.
+
+Pour activer ou désactiver manuellement une interface :
+
+```bash
+sudo ip link set dev eth0 up
+sudo ip link set dev eth0 down
+```
+
+</div>
+
+---
+
+
+### Maintenance de la configuration réseau
+
+####  Maintenance régulière
+
+<div style="font-size:26px">
+
+<br>
+
+###  Vérification de la table de routage :
+
+Voir les routes configurées :
+
+```bash
+ip route show
+```
+
+Exemple de sortie :
+
+```
+default via 192.168.1.1 dev eth0 
+192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.10
+```
+
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Maintenance régulière
+
+<div style="font-size:30px">
+
+<br>
+
+###  Test de la connectivité :
+
+Vérification simple de la connectivité avec `ping` et `traceroute` :
+
+```bash
+ping 8.8.8.8
+traceroute 8.8.8.8
+```
+
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Gestion et redémarrage des services réseau
+
+<div style="font-size:25px">
+
+Après chaque modification des fichiers de configuration, un redémarrage du service réseau est nécessaire.
+
+- **Méthode classique (sans NetworkManager)** :
+
+```bash
+sudo systemctl restart networking.service
+```
+
+- **Si vous utilisez NetworkManager** (fréquent sur un poste de travail Debian avec interface graphique) :
+
+```bash
+sudo systemctl restart NetworkManager.service
+```
+
+- **Vérifier le statut après redémarrage** :
+
+```bash
+sudo systemctl status networking
+sudo journalctl -xeu networking
+```
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Vérification des journaux (logs)
+
+<div style="font-size:35px">
+
+<br>
+
+Pour examiner les erreurs réseau, consultez les journaux systèmes :
+
+```bash
+sudo journalctl -u networking.service
+sudo dmesg | grep eth0
+```
+
+Cela permet d’identifier rapidement les erreurs de configuration ou les problèmes matériels éventuels.
+
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Sauvegarde et restauration de configurations
+
+<div style="font-size:35px">
+
+<br>
+Il est recommandé de toujours sauvegarder les fichiers avant de les modifier :
+
+- **Sauvegarde** :
+
+```bash
+sudo cp /etc/network/interfaces /etc/network/interfaces.bak
+```
+
+- **Restauration** en cas d’erreur :
+
+```bash
+sudo cp /etc/network/interfaces.bak /etc/network/interfaces
+sudo systemctl restart networking
+```
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Automatisation et scripts de maintenance
+
+<div style="font-size:25px">
+
+Utiliser des scripts pour automatiser des tâches fréquentes, comme vérifier si l’interface est opérationnelle :
+
+### Exemple de script Bash pour vérifier une interface :
+
+Créez un fichier : `check_interface.sh`
+
+```bash
+#!/bin/bash
+
+IFACE="eth0"
+
+if ip link show "$IFACE" | grep -q "state UP"; then
+    echo "[$(date)] : Interface $IFACE opérationnelle."
+else
+    echo "[$(date)] : Interface $IFACE en panne. Tentative de redémarrage..."
+    ip link set dev "$IFACE" up
+fi
+```
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Automatisation et scripts de maintenance
+
+<div style="font-size:24px">
+
+Utiliser des scripts pour automatiser des tâches fréquentes, comme vérifier si l’interface est opérationnelle :
+
+### Exemple de script Bash pour vérifier une interface :
+
+Donnez-lui les droits d’exécution :
+
+```bash
+chmod +x check_interface.sh
+```
+
+Automatisez son exécution via `cron` :
+
+```bash
+sudo crontab -e
+```
+
+Ajoutez une ligne pour exécuter le script toutes les 5 minutes :
+
+```bash
+*/5 * * * * /chemin/check_interface.sh >> /var/log/interface_check.log 2>&1
+```
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Dépannage avancé
+
+<div style="font-size:26px">
+
+<br>
+
+#### Analyse avancée avec `tcpdump` :
+
+
+
+Pour capturer le trafic réseau sur une interface :
+
+```bash
+sudo tcpdump -i eth0 -n
+```
+
+Enregistrer le trafic dans un fichier pour analyse ultérieure avec Wireshark :
+
+```bash
+sudo tcpdump -i eth0 -w capture.pcap
+```
+
+Ouvrir ensuite `capture.pcap` avec Wireshark pour une analyse approfondie.
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Dépannage avancé
+
+<div style="font-size:26px">
+
+<br>
+
+#### Vérification des règles firewall :
+
+Parfois, les problèmes réseau proviennent d’un firewall mal configuré. Vérifiez les règles avec `iptables` ou `ufw` :
+
+- Avec `iptables` :
+
+```bash
+sudo iptables -L -n -v
+```
+
+- Avec `ufw` (firewall simplifié de Debian) :
+
+```bash
+sudo ufw status verbose
+```
+
+</div>
+
+---
+
+### Maintenance de la configuration réseau
+
+####  Dépannage avancé
+
+<div style="font-size:30px">
+
+
+
+#### ✅ **Bonnes pratiques recommandées :**
+
+- Toujours sauvegarder les configurations avant toute modification.
+- Valider systématiquement les changements en redémarrant les services réseau.
+- Consulter les logs régulièrement pour anticiper les problèmes.
+- Automatiser les tâches de maintenance par des scripts.
+
+
+</div>
+
+---
+
+
+<!-- _class: lead -->
+<!-- _paginate: false -->
+
+## Contrôler et améliorer les performances
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Recherche des problèmes de performance
+
+<div style="font-size:20px">
+
+#### Signes courants :
+- Forte utilisation CPU (`top`, `htop`)
+- Consommation mémoire excessive (`free`, `vmstat`)
+- Problèmes d'entrée/sortie disque (latence d’accès, `iostat`)
+- Latence ou saturation réseau (`iftop`, `nload`)
+
+####  Commandes pratiques pour débuter :
+- Vue temps réel des ressources :
+```bash
+htop
+```
+
+- Mémoire disponible :
+```bash
+free -h
+```
+
+- Charge système :
+```bash
+uptime
+```
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Analyses des différentes couches
+
+<div style="font-size:20px">
+
+Pour diagnostiquer précisément les problèmes, il faut analyser chaque couche critique du système Linux :
+
+#### **Couche CPU :**
+  - Identifier la consommation CPU :
+      ```bash
+         top
+         htop
+      ```
+  - Analyser la répartition de la charge CPU :
+      ```bash
+         mpstat -P ALL 2
+      ```
+
+####  **Couche mémoire :**
+  - Surveiller l’usage mémoire en continu :
+      ```bash
+         vmstat 1
+      ```
+  - Identifier les processus les plus gourmands :
+      ```bash
+         ps aux --sort=-%mem | head -n 10
+      ```
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Analyses des différentes couches
+
+<div style="font-size:23px">
+
+
+#### **Couche stockage (disques et I/O) :**
+- Analyser l’activité disque :
+```bash
+iostat -dxm 2
+```
+- Mesurer la latence des disques :
+```bash
+ioping -c 10 /dev/sda
+```
+
+#### **Couche réseau :**
+- Suivi du trafic réseau :
+```bash
+iftop -i eth0
+```
+- Afficher la bande passante utilisée :
+```bash
+nload eth0
+```
+
+</div>
+
+---
+
+
+### Contrôler et améliorer les performances
+
+####  Tester les performances
+
+<div style="font-size:27px">
+
+Pour valider les performances du système, utilisez des tests dédiés à chaque ressource :
+
+#### Tests CPU :
+- Benchmark CPU simple :
+```bash
+sysbench cpu --cpu-max-prime=20000 run
+```
+
+#### Tests mémoire :
+- Vérification des accès mémoire :
+```bash
+sysbench memory --memory-total-size=2G run
+```
+
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Tester les performances
+
+<div style="font-size:24px">
+
+#### Tests disque :
+- Performance en lecture/écriture disque :
+```bash
+sudo hdparm -Tt /dev/sda
+```
+- Benchmark avancé I/O :
+```bash
+fio --name=randwrite --ioengine=libaio --rw=randwrite --bs=4k --size=1G --numjobs=4 --time_based --runtime=60 --group_reporting
+```
+#### Tests réseau :
+- Débit réseau entre deux serveurs (client/serveur) avec `iperf3` :
+```bash
+# Serveur
+iperf3 -s
+# Client
+iperf3 -c IP_SERVEUR -t 60
+```
+
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:35px">
+
+#### Identifier les goulots :
+- Charge CPU trop élevée
+- Mémoire constamment saturée (swap actif)
+- Disque avec latence élevée (I/O wait)
+- Réseau saturé (latences réseau élevées)
+
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:26px">
+
+
+
+### Résolution des goulots courants :
+
+<br>
+
+**CPU saturé :**
+- Optimiser ou répartir les processus lourds.
+- Ajouter des ressources CPU supplémentaires.
+
+**Mémoire saturée :**
+- Augmenter la mémoire physique.
+- Optimiser les processus consommateurs de mémoire.
+- Ajuster les paramètres du système (swapiness).
+
+```bash
+sudo sysctl vm.swappiness=10
+```
+
+</div>
+
+---
+
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:28px">
+
+### Résolution des goulots courants :
+
+<br>
+
+**I/O disque saturé :**
+- Migrer vers des disques SSD ou mieux configurer le RAID.
+- Optimiser le système de fichiers (ext4, XFS).
+
+**Réseau saturé :**
+- Augmenter la bande passante disponible.
+- Optimiser les protocoles utilisés ou équilibrer les charges réseau.
+
+
+</div>
+
+---
+
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:23px">
+
+### 1. Solutions pour saturation du CPU :
+
+####  **a. Optimiser ou répartir les processus lourds**
+
+- **Identifier les processus consommateurs** :
+
+```bash
+htop
+top
+ps aux --sort=-%cpu | head -n 5
+```
+
+- **Optimiser la priorité des processus lourds (nice/renice)** :
+
+Le paramètre « nice » permet d'ajuster la priorité d’un processus sous Linux.
+
+```bash
+# Diminuer la priorité du processus (moins prioritaire, laisse de la place aux autres)
+renice +10 -p <PID>
+
+# Augmenter la priorité du processus (plus prioritaire)
+renice -10 -p <PID>
+```
+
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:26px">
+
+### 1. Solutions pour saturation du CPU :
+
+####  **a. Optimiser ou répartir les processus lourds**
+
+- **Répartir les charges CPU avec `taskset`** (affinité CPU) :
+
+Parfois, lier des processus lourds à des cœurs précis permet de mieux gérer la répartition des charges.
+
+```bash
+# Fixer un processus sur le cœur 2 (en commençant à zéro)
+taskset -cp 2 <PID>
+
+# Répartir sur les cœurs 0 et 1 uniquement
+taskset -cp 0,1 <PID>
+```
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:26px">
+
+### 1. Solutions pour saturation du CPU :
+
+#### **b. Ajouter des ressources CPU supplémentaires**
+
+- **Ajouter des CPU virtuels (VM)** :
+
+Sur une VM, augmenter le nombre de CPU attribués via l’hyperviseur (VirtualBox, VMware, KVM).
+
+- **Ajouter des CPU physiques (serveur physique)** :
+
+Ajouter des processeurs compatibles physiquement sur votre serveur ou migrer vers un matériel avec plus de cœurs.
+
+- **Augmenter dynamiquement les cœurs disponibles** :
+
+En environnement cloud ou virtualisé, adapter le nombre de vCPU en fonction de la charge.
+
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:20px">
+
+### 2. Solutions pour saturation de la Mémoire
+
+#### **a. Augmenter la mémoire physique**
+
+- Solution la plus simple : Ajoutez physiquement des barrettes mémoire (serveur physique).
+- Augmentez l’allocation mémoire virtuelle dans une VM depuis votre hyperviseur/cloud.
+
+
+#### **b. Optimiser les processus consommateurs de mémoire**
+
+- Identifier les processus consommateurs de RAM :
+
+```bash
+ps aux --sort=-%mem | head -n 5
+htop
+```
+
+- Redémarrer ou tuer les processus inutiles ou qui fuient (memory leak) :
+
+```bash
+kill -9 <PID>
+systemctl restart <nom_service>
+```
+
+- Rechercher et corriger les fuites mémoires éventuelles dans vos applications (développeurs).
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:22px">
+
+### 2. Solutions pour saturation de la Mémoire
+
+#### c. Ajuster les paramètres système (swapiness)
+
+- Par défaut, Linux utilise un réglage "vm.swappiness=60". Vous pouvez réduire ce chiffre afin que le noyau n'utilise le swap qu'en cas de nécessité :
+
+- Pour ajuster en temps réel :
+
+```bash
+sudo sysctl vm.swappiness=10
+```
+
+- Pour rendre permanent après redémarrage, modifiez `/etc/sysctl.conf` :
+
+```bash
+echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+*Explication : une valeur basse signifie que le noyau évitera le swap tant que possible.*
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:22px">
+
+### 3. Solutions pour saturation des I/O disque
+
+####  a. Migrer vers des disques SSD ou configurer un RAID
+
+- **Passer sur des disques SSD** :  
+  Un SSD augmente drastiquement les performances I/O, réduisant ainsi les latences.
+
+- **RAID matériel ou logiciel** :  
+  Configurer un RAID 0 (performance maximale, sans redondance) ou RAID 10 (performances et redondance).
+
+- Exemple rapide RAID logiciel (Linux mdadm) RAID0 :
+
+```bash
+sudo mdadm --create --verbose /dev/md0 --level=0 --raid-devices=2 /dev/sdb /dev/sdc
+mkfs.ext4 /dev/md0
+mount /dev/md0 /mnt/raid
+```
+
+*Attention : RAID 0 ne protège pas des pertes de données en cas de panne d’un disque.*
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:22px">
+
+### 3. Solutions pour saturation des I/O disque
+
+#### b. Optimiser le système de fichiers**
+
+- **Choisir un système de fichiers performant (XFS, ext4)** :
+
+  - **XFS** : Adapté aux très gros volumes et hautes performances I/O.
+  - **ext4** : Système stable et performant pour la plupart des usages.
+
+- Exemple d’optimisation ext4 : désactiver atime (access time) :
+
+Modifier `/etc/fstab` :
+
+```bash
+UUID=<your-uuid> / ext4 defaults,noatime 0 1
+```
+
+*Explication : `noatime` réduit fortement les accès inutiles au disque.*
+
+- Autres options (`commit`, `data=writeback`) à étudier selon vos cas d'utilisation.
+
+
+</div>
+
+---
+
+#### Contrôler et améliorer les performances
+
+#####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:20px">
+
+#### 4. Solutions pour saturation réseau
+
+##### a. Augmenter la bande passante disponible
+
+- Passer à une carte réseau à plus haut débit (1Gb → 10Gb Ethernet).
+- Agréger plusieurs cartes réseau (Bonding Linux).
+
+- Exemple simple d’agrégation (bonding) :
+
+- Fichier : `/etc/network/interfaces`
+
+```bash
+auto bond0
+iface bond0 inet static
+  address 192.168.1.10
+  netmask 255.255.255.0
+  gateway 192.168.1.1
+  bond-mode 802.3ad
+  bond-miimon 100
+  bond-slaves eth0 eth1
+```
+Recharger le réseau : ```sudo systemctl restart networking```
+
+</div>
+
+---
+
+#### Contrôler et améliorer les performances
+
+#####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:20px">
+
+#### 4. Solutions pour saturation réseau
+
+##### b. Optimiser les protocoles ou équilibrer les charges réseau
+
+- **Équilibrage de charge réseau (load balancing)** :
+
+Mettre en place des répartiteurs de charge (load balancer) comme HAProxy ou NGINX pour répartir la charge sur plusieurs serveurs.
+
+- **Optimiser les protocoles réseau utilisés :**  
+  - Réduire les retransmissions inutiles.
+  - Choisir TCP plutôt qu'UDP lorsque pertinent (ou inversement).
+  - Optimiser TCP (paramètres noyau) :
+
+Exemple optimisation TCP dans `/etc/sysctl.conf` :
+
+```bash
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.ip_local_port_range = 1024 65000
+net.core.somaxconn = 4096
+net.core.netdev_max_backlog = 10000
+```
+
+Appliquer :```sudo sysctl -p```
+
+
+</div>
+
+---
+
+
+
+### Contrôler et améliorer les performances
+
+####  Identifier les goulots d’étranglements et résolution
+
+<div style="font-size:20px">
+
+#### ✅ **Synthèse des solutions proposées :**
+
+| Problème identifié  | Solutions recommandées |
+|---------------------|------------------------|
+| CPU saturé          | Optimisation processus, Affinité CPU, Priorités (nice), ajout CPU physique/virtuel |
+| Mémoire saturée     | Ajout mémoire, Optimisation processus, Ajustement swappiness |
+| Disque saturé (I/O) | Migration SSD, RAID, Optimisation système fichiers |
+| Réseau saturé       | Augmentation bande passante, bonding réseau, équilibrage charge, Optimisation paramètres TCP |
+
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Introduction à la supervision centralisée
+
+<div style="font-size:24px">
+
+- La supervision centralisée permet de contrôler et d’anticiper les problèmes en collectant des données depuis plusieurs systèmes Linux simultanément.
+
+#### Intérêt de la supervision centralisée :
+- Vue globale de l’infrastructure.
+- Anticipation et alertes automatiques en cas de problème.
+- Identification rapide de l’origine des incidents.
+
+#### Outils de supervision centralisée courants :
+- **Prometheus + Grafana :** monitoring moderne avec des métriques riches.
+- **Zabbix :** supervision complète avec gestion d'alertes.
+- **Centreon :** outil centralisé intuitif avec des alertes avancées.
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Introduction à la supervision centralisée
+
+<div style="font-size:24px">
+
+<br>
+
+#### Exemple rapide avec Prometheus et Grafana :
+
+
+
+- Installation simplifiée (exemple rapide) :
+```bash
+sudo apt install prometheus-node-exporter
+```
+
+- Vérification du service :
+```bash
+curl localhost:9100/metrics
+```
+
+- Grafana : Tableau de bord intuitif pour visualiser les données recueillies par Prometheus, idéal pour détecter rapidement les anomalies.
+
+</div>
+
+---
+
+### Contrôler et améliorer les performances
+
+####  Introduction à la supervision centralisée
+
+<div style="font-size:30px">
+
+<br>
+
+#### 📌 **Bonnes pratiques recommandées :**
+- Mettre en place des tests réguliers (benchmark planifiés).
+- Maintenir une documentation claire des performances et incidents.
+- Utiliser systématiquement une solution de supervision centralisée.
+- Définir clairement des seuils d’alerte pour anticiper les problèmes.
+
+
+</div>
+
+---
+
+
+
 
 
 
