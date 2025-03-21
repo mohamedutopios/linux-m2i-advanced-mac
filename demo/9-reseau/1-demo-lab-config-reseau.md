@@ -58,7 +58,7 @@ Vagrant.configure("2") do |config|
   # VM Client
   config.vm.define "client" do |client|
     client.vm.box = "debian/bookworm64"
-    client.vm.network "private_network", ip: "192.168.56.10"
+    client.vm.network "private_network", ip: "192.168.56.11"
     client.vm.provider "virtualbox" do |vb|
       vb.memory = 512
       vb.cpus = 1
@@ -88,28 +88,66 @@ vagrant ssh router
 
 ---
 
+Voici une version corrigée et intégrée des étapes pour configurer le réseau sur vos VM :
+
+---
+
 ## **3️⃣ Configuration réseau sur les VM**
-**🚀 Sur `router` (Passerelle & NAT)**
-📌 **Activer le routage :**
-```bash
-echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
-sudo sysctl -p
-```
-📌 **Ajouter une règle NAT pour permettre l’accès Internet aux autres VMs :**
-```bash
-sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-```
 
-**🖥 Sur `client` et `server`**
-📌 **Configurer la passerelle pour qu’ils passent par `router` :**
-```bash
-sudo ip route add default via 192.168.56.1
-```
-📌 **Tester la connectivité Internet :**
-```bash
-ping -c 4 8.8.8.8
-```
+### **🚀 Sur `router` (Passerelle & NAT)**
+1. **Activer le routage IP**  
+   Permet de faire transiter le trafic entre les interfaces.
+   ```bash
+   echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
+   sudo sysctl -p
+   ```
 
+2. **Ajouter la règle NAT (MASQUERADE)**  
+   Cette règle masque le trafic provenant du réseau privé lorsqu’il sort par l’interface NAT (généralement `eth0`) vers Internet.
+   ```bash
+   sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+   ```
+
+3. **(Vérification / Ajustement de la route par défaut)**  
+   Assurez-vous que le routeur utilise bien son interface NAT pour sortir vers Internet. Si la route par défaut n’est pas présente ou correcte, ajoutez-la (par exemple, si la passerelle NAT est `10.0.2.2`) :
+   ```bash
+   sudo ip route add default via 10.0.2.2 dev eth0
+   ```
+   *Note :* Dans de nombreuses configurations Vagrant, cette route est déjà présente par défaut.
+
+---
+
+### **🖥 Sur `client` et `server`**
+1. **Configurer la passerelle via `router`**  
+   Supprimez la route par défaut existante sur l’interface NAT (`eth0`) et ajoutez une nouvelle route par défaut pour utiliser l’interface réseau privé (`eth1`) et passer par `router` (IP `192.168.56.1`) :
+   ```bash
+   sudo ip route del default via 10.0.2.2 dev eth0
+   sudo ip route add default via 192.168.56.1 dev eth1
+   ```
+
+2. **Tester la connectivité Internet**  
+   Vérifiez que la redirection fonctionne en pingant une adresse externe (ici, Google DNS) :
+   ```bash
+   ping -c 4 8.8.8.8
+   ```
+
+---
+
+### **Points de vérification complémentaires**
+
+- **Sur le routeur**, vous pouvez vérifier le trafic NAT et la transmission des paquets en utilisant :
+  ```bash
+  sudo iptables -t nat -L -n
+  sudo iptables -L FORWARD -n
+  ```
+- **Utilisez `tcpdump`** sur le routeur pour observer le trafic sur les interfaces, par exemple :
+  ```bash
+  sudo apt-get update
+  sudo apt-get install tcpdump
+  sudo tcpdump -i eth0
+  ```
+
+Cette configuration permet au routeur de servir de passerelle NAT pour les VMs `client` et `server` et d’assurer que leur trafic Internet passe correctement par le réseau privé vers le routeur, puis vers Internet via l’interface NAT.
 ---
 
 ## **4️⃣ Tester le DNS**
@@ -141,19 +179,78 @@ dig google.com
 ## **5️⃣ Configuration du pare-feu avec `iptables`**
 📌 **Sur `router`, bloquer tout sauf le trafic autorisé :**
 ```bash
+# Définir les politiques par défaut sur DROP
 sudo iptables -P INPUT DROP
 sudo iptables -P FORWARD DROP
+sudo iptables -P OUTPUT ACCEPT
+
+# INPUT et FORWARD sont en DROP, ce qui signifie que tout est bloqué sauf ce qui est explicitement autorisé.
+# OUTPUT est mis sur ACCEPT (pour permettre au routeur d'envoyer du trafic sans restriction).
+
+# INPUT : Autoriser les connexions déjà établies ou reliées
 sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# INPUT : Autoriser les requêtes ICMP (ping) destinées au routeur
 sudo iptables -A INPUT -p icmp -j ACCEPT
+
+# INPUT : Autoriser SSH (port 22) vers le routeur
 sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+
+sudo iptables -I INPUT -p udp --dport 53 -j ACCEPT
+
+sudo iptables -I INPUT -p tcp --dport 53 -j ACCEPT
+
+# INPUT (optionnel) : Autoriser HTTP/HTTPS si le routeur doit lui-même servir du contenu web
+sudo iptables -A INPUT -p tcp -m multiport --dports 80,443 -j ACCEPT
+
+#Chaîne INPUT :
+
+# On autorise les paquets déjà établis.
+# On autorise ICMP et le SSH pour la gestion du routeur.
+# On autorise HTTP/HTTPS si le routeur doit recevoir des connexions web.
+
+# FORWARD : Autoriser les connexions déjà établies ou reliées transitant par le routeur
+sudo iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# FORWARD : Autoriser le trafic ICMP transitant par le routeur
+sudo iptables -A FORWARD -p icmp -j ACCEPT
+
+# FORWARD : Autoriser les nouvelles connexions HTTP et HTTPS initiées depuis le réseau interne
+sudo iptables -A FORWARD -p tcp -m multiport --dports 80,443 -m conntrack --ctstate NEW -j ACCEPT
+
+# Chaîne FORWARD :
+
+# On autorise les paquets établis pour le transit.
+# On ajoute une règle explicite pour autoriser les paquets ICMP transitant.
+# On autorise les nouvelles connexions TCP destinées aux ports 80 et 443 (HTTP/HTTPS) initiées depuis le réseau interne.
+
+# Pour le NAT, autoriser le masquage du trafic sortant via l'interface NAT (ici eth0)
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+# NAT :
+
+# La règle MASQUERADE dans la table NAT permet aux paquets provenant du réseau interne de sortir vers Internet via l'interface eth0 en utilisant l'adresse IP publique du routeur.
+
+
 ```
 📌 **Enregistrer la configuration :**
 ```bash
-sudo iptables-save > /etc/iptables/rules.v4
+sudo mkdir -p /etc/iptables
+sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
 ```
 📌 **Tester depuis `client` :**
 ```bash
 ping 192.168.56.1
+telnet 192.168.56.1 22
+refus pour :  telnet 192.168.56.1 80
+
+```
+
+📌 **Tester depuis `client` :**
+```bash
+sudo apt-get update
+sudo apt-get install nmap
+sudo nmap -p 22,80,443 192.168.56.1
 ```
 
 ---

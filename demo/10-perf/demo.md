@@ -107,6 +107,7 @@ du -ahx / | sort -rh | head -20
 ### 🌐 **Analyse du réseau**
 #### **Étape 1 : Surveiller la bande passante sur une interface**
 ```bash
+sudo apt install nload -y
 nload eth0
 ```
 #### **Étape 2 : Voir les connexions en attente et les ports ouverts**

@@ -57,7 +57,14 @@ ip route show
 ```
 📌 **Solution : Ajouter la route statique sur `router`**
 ```bash
-sudo ip route add 192.168.56.0/24 via 192.168.56.1
+# Ajouter une route statique pour le réseau 192.168.56.0/24 via l'interface eth1,
+# avec une portée limitée à la liaison et une adresse source par défaut spécifiée.
+sudo ip route add 192.168.56.0/24 \   # Réseau cible avec masque /24 (de 192.168.56.0 à 192.168.56.255)
+               dev eth1 \          # Utiliser l'interface eth1 pour accéder à ce réseau
+               proto kernel \      # Indique que la route est gérée par le noyau
+               scope link \        # La portée de la route est limitée à la liaison locale (accès direct)
+               src 192.168.56.1    # Spécifie l'adresse source par défaut pour les paquets envoyés via cette route
+
 ```
 📌 **Tester la connexion depuis `client` vers `server`**
 ```bash
